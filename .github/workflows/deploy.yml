@@ -46,12 +46,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           outputs: type=docker
-        continue-on-error: true
 
       - name: Test Docker image locally
         if: github.event_name == 'pull_request'
         run: |
           docker build -t lung-cancer-detection:test . -q
+          docker run --rm -d --name lung-cancer-smoke -p 8501:8501 lung-cancer-detection:test
+          sleep 20
+          curl -fsS http://localhost:8501/_stcore/health
+          docker stop lung-cancer-smoke
           echo "✅ Docker build test successful"
 
   deploy-to-render:
@@ -111,10 +114,8 @@ jobs:
 
       - name: Lint with flake8
         run: |
-          flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics || true
-        continue-on-error: true
+          flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Check requirements.txt syntax
         run: |
-          pip install --dry-run -r requirements.txt || true
-        continue-on-error: true
+          pip install --dry-run -r requirements.txt

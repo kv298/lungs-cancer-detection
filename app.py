@@ -2,6 +2,8 @@
 import pickle
 import os
 import sys
+import logging
+from pathlib import Path
 import streamlit as st
 import numpy as np
 import pyparsing
@@ -20,8 +22,43 @@ import tensorflow as tf
 from io import BytesIO
 from streamlit_option_menu import option_menu
 st.set_page_config(page_title='Lung Cancer Detection')
-#Loading models
-cancer_model = pickle.load(open('models/final_model.sav', 'rb'))
+
+LOGGER = logging.getLogger(__name__)
+BASE_DIR = Path(__file__).resolve().parent
+TABULAR_MODEL_PATH = BASE_DIR / "models" / "final_model.sav"
+
+
+@st.cache_resource
+def load_tabular_model():
+    """Load and cache the tabular model once per app process."""
+    if not TABULAR_MODEL_PATH.exists():
+        st.error(f"Tabular model not found at `{TABULAR_MODEL_PATH}`.")
+        LOGGER.error("Missing tabular model file: %s", TABULAR_MODEL_PATH)
+        return None
+    try:
+        with TABULAR_MODEL_PATH.open("rb") as model_file:
+            return pickle.load(model_file)
+    except Exception as err:
+        st.error("Failed to load tabular model.")
+        st.code(str(err))
+        LOGGER.exception("Tabular model load failed")
+        return None
+
+
+def parse_numeric_fields(fields):
+    """Parse user input strings to ints and return (values, invalid_fields)."""
+    parsed = []
+    invalid = []
+    for name, raw_value in fields:
+        try:
+            parsed.append(int(str(raw_value).strip()))
+        except (TypeError, ValueError):
+            invalid.append(name)
+    return parsed, invalid
+
+
+# Loading model once with defensive error handling
+cancer_model = load_tabular_model()
 
 
 with st.sidebar:
@@ -361,24 +398,60 @@ if (selection == 'Lung Cancer Prediction'):
         Snoring = st.text_input('Snoring  ', key="17",value=q)
  
     # code for Prediction
-    heart_diagnosis = ''
+    lung_diagnosis = ''
     
     # creating a button for Prediction
     
-    if st.button('Heart Disease Test Result'):
-        heart_prediction = cancer_model.predict([[Age, Gender, AirPollution, Alcoholuse, BalancedDiet, Obesity, Smoking, PassiveSmoker, Fatigue, WeightLoss,ShortnessofBreath, Wheezing, SwallowingDifficulty,ClubbingofFingerNails, FrequentCold, DryCough, Snoring]])                          
-        
-        if (heart_prediction[0] == 'High'):
-          heart_diagnosis = 'The person is having heart disease'
-          st.error(heart_diagnosis)
+    if st.button('Predict Lung Cancer Risk'):
+        if cancer_model is None:
+            st.error("Prediction model is unavailable. Please check deployment artifacts.")
+            st.stop()
 
-        elif(heart_prediction[0] == 'Medium'):
-          heart_diagnosis = 'The person is chance of having heart disease'
-          st.warning(heart_diagnosis)
+        feature_fields = [
+            ("Age", Age),
+            ("Gender", Gender),
+            ("Air Pollution", AirPollution),
+            ("Alcohol Use", Alcoholuse),
+            ("Balanced Diet", BalancedDiet),
+            ("Obesity", Obesity),
+            ("Smoking", Smoking),
+            ("Passive Smoker", PassiveSmoker),
+            ("Fatigue", Fatigue),
+            ("Weight Loss", WeightLoss),
+            ("Shortness of Breath", ShortnessofBreath),
+            ("Wheezing", Wheezing),
+            ("Swallowing Difficulty", SwallowingDifficulty),
+            ("Clubbing of Finger Nails", ClubbingofFingerNails),
+            ("Frequent Cold", FrequentCold),
+            ("Dry Cough", DryCough),
+            ("Snoring", Snoring),
+        ]
+        parsed_features, invalid_fields = parse_numeric_fields(feature_fields)
+        if invalid_fields:
+            st.error(
+                "Please enter valid numeric values for: "
+                + ", ".join(invalid_fields)
+            )
+            st.stop()
+
+        try:
+            prediction = cancer_model.predict([parsed_features])
+        except Exception as err:
+            st.error("Prediction failed. Please try again.")
+            st.code(str(err))
+            LOGGER.exception("Tabular model prediction failed")
+            st.stop()
+
+        if prediction[0] == 'High':
+            lung_diagnosis = 'High risk detected. Please consult a medical professional.'
+            st.error(lung_diagnosis)
+        elif prediction[0] == 'Medium':
+            lung_diagnosis = 'Moderate risk detected. Clinical review is recommended.'
+            st.warning(lung_diagnosis)
         else:
-          heart_diagnosis = 'The person does not have any heart disease'
-          st.balloons()
-          st.success(heart_diagnosis)
+            lung_diagnosis = 'Low risk prediction based on provided inputs.'
+            st.balloons()
+            st.success(lung_diagnosis)
         
         
 
