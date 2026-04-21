@@ -1,10 +1,28 @@
-numpy==1.21.5
-pickle-mixin==1.0.2
-streamlit==1.18.0
-pandas==1.4.2
-scikit-learn==1.2.0
+# Core dependencies
+numpy==1.23.5
+pandas==1.5.3
+scikit-learn==1.2.2
+
+# Streamlit
+streamlit==1.27.2
 streamlit-option-menu==0.3.2
-tensorflow
-seaborn
-pyparsing
-# protobuf==3.19.6
+
+# Deep Learning (Keras is bundled with TensorFlow)
+tensorflow==2.13.0
+
+# Image processing & ML
+pillow==10.0.0
+opencv-python==4.8.0.74
+
+# Data visualization
+matplotlib==3.7.2
+seaborn==0.12.2
+altair==4.2.2
+
+# Utilities
+pyparsing==3.0.9
+pickle-mixin==1.0.2
+
+# For production
+gunicorn==21.2.0
+python-dotenv==1.0.0

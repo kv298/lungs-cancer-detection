@@ -1,0 +1,105 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Python
+__pycache__
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE & Editors
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+*.ipynb
+pynb\ files/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+README.md
+DEPLOYMENT*.md
+DOCKER_RENDER_DEPLOYMENT.md
+RENDER_QUICKSTART.md
+QUICKSTART.md
+*.md
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# CI/CD
+.github/workflows/
+
+# Optional development files
+Animation.gif
+gg.txt
+setup-deployment.*
+deploy-setup.*
+
+# Cache and temporary files
+.streamlit/cache*
+.streamlit/*.cache*
+.cache/
+tmp/
+temp/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github
+.gitlab-ci.yml
+
+# Development
+node_modules/
+.npm
+
+# OS
+Thumbs.db
+.DS_Store

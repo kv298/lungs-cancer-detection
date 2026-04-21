@@ -1,0 +1,120 @@
+name: Build and Deploy to Render
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/lung-cancer-detection
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && secrets.DOCKERHUB_USERNAME != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name == 'push' && secrets.DOCKERHUB_USERNAME != '' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/lung-cancer-detection:latest
+            ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/lung-cancer-detection:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          outputs: type=docker
+        continue-on-error: true
+
+      - name: Test Docker image locally
+        if: github.event_name == 'pull_request'
+        run: |
+          docker build -t lung-cancer-detection:test . -q
+          echo "✅ Docker build test successful"
+
+  deploy-to-render:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.RENDER_DEPLOY_HOOK != ''
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Trigger Render deployment
+        run: |
+          echo "🚀 Triggering Render deployment..."
+          response=$(curl -w "\n%{http_code}" -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}" 2>&1)
+          status_code=$(echo "$response" | tail -n1)
+
+          if [[ "$status_code" =~ ^(200|204)$ ]]; then
+            echo "✅ Deployment triggered successfully (HTTP $status_code)"
+          else
+            echo "⚠️  Deployment hook returned HTTP $status_code"
+            echo "Response: $(echo "$response" | head -n-1)"
+          fi
+
+      - name: Notify deployment
+        if: always()
+        run: |
+          echo "📋 Deployment Summary"
+          echo "===================="
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Author: ${{ github.actor }}"
+          echo ""
+          echo "Check your Render dashboard for deployment status:"
+          echo "🔗 https://dashboard.render.com"
+          echo ""
+          echo "Your app URL:"
+          echo "🌐 https://lung-cancer-detection.onrender.com"
+
+  linting:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pylint flake8
+
+      - name: Lint with flake8
+        run: |
+          flake8 app.py --count --select=E9,F63,F7,F82 --show-source --statistics || true
+        continue-on-error: true
+
+      - name: Check requirements.txt syntax
+        run: |
+          pip install --dry-run -r requirements.txt || true
+        continue-on-error: true

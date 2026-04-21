@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: lung-cancer-detection
+    env: docker
+    dockerfilePath: ./Dockerfile
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /_stcore/health
+
+    # Environment variables
+    envVars:
+      - key: STREAMLIT_SERVER_HEADLESS
+        value: "true"
+      - key: STREAMLIT_SERVER_ENABLE_CORS
+        value: "false"
+      - key: STREAMLIT_SERVER_ENABLE_XSRF_PROTECTION
+        value: "false"
+      - key: STREAMLIT_LOGGER_LEVEL
+        value: "info"
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: "3"
+      - key: TF_USE_LEGACY_KERAS
+        value: "1"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PYTHONHASHSEED
+        value: "0"
